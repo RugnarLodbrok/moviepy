@@ -4,7 +4,8 @@ import numpy as np
 from PIL import Image
 
 from moviepy.audio.AudioClip import CompositeAudioClip
-from moviepy.video.VideoClip import ColorClip, VideoClip
+from moviepy.video.VideoClip import VideoClip
+from moviepy.video.ImageClip import ColorClip
 
 
 class CompositeVideoClip(VideoClip):
@@ -58,13 +59,14 @@ class CompositeVideoClip(VideoClip):
         if size is None:
             size = clips[0].size
 
-        if use_bgclip and (clips[0].mask is None):
-            transparent = False
-        else:
-            transparent = bg_color is None
+        # if use_bgclip and (clips[0].mask is None):
+        #     transparent = False
+        # else:
+        #     transparent = bg_color is None
+        transparent = False  # because transparent doesn't work well
 
         if bg_color is None:
-            bg_color = 0.0 if is_mask else (0, 0, 0)
+            bg_color = 0.0 if is_mask else np.array([0, 0, 0], dtype=np.uint8)
 
         fpss = [clip.fps for clip in clips if getattr(clip, "fps", None)]
         self.fps = max(fpss) if fpss else None

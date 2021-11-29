@@ -28,12 +28,10 @@ from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.VideoClip import (
     BitmapClip,
-    ColorClip,
-    ImageClip,
-    TextClip,
     VideoClip,
 )
-
+from moviepy.video.ImageClip import ColorClip, ImageClip
+from moviepy.video.TextClip import TextClip
 
 # Transforms the effects into Clip methods so that
 # they can be called with clip.resize(width=500) instead of

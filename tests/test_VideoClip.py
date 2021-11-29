@@ -15,7 +15,8 @@ from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from moviepy.video.fx.mask_color import mask_color
 from moviepy.video.fx.multiply_speed import multiply_speed
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from moviepy.video.VideoClip import BitmapClip, ColorClip, ImageClip, VideoClip
+from moviepy.video.VideoClip import BitmapClip, VideoClip
+from moviepy import ColorClip, ImageClip
 
 
 def test_aspect_ratio():

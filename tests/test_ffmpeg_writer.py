@@ -12,7 +12,8 @@ from moviepy.video.io.ffmpeg_writer import ffmpeg_write_image, ffmpeg_write_vide
 from moviepy.video.io.gif_writers import write_gif
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from moviepy.video.tools.drawing import color_gradient
-from moviepy.video.VideoClip import BitmapClip, ColorClip
+from moviepy.video.VideoClip import BitmapClip
+from moviepy import ColorClip
 
 
 @pytest.mark.parametrize(

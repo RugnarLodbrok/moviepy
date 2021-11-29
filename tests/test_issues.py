@@ -10,8 +10,8 @@ from moviepy.video.compositing.concatenate import concatenate_videoclips
 from moviepy.video.compositing.transitions import crossfadein, crossfadeout
 from moviepy.video.fx.resize import resize
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from moviepy.video.VideoClip import ColorClip, ImageClip, VideoClip
-
+from moviepy.video.VideoClip import VideoClip
+from moviepy import ColorClip, ImageClip
 
 try:
     import matplotlib.pyplot

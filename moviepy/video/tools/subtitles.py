@@ -6,7 +6,8 @@ import numpy as np
 
 from moviepy.decorators import convert_path_to_string
 from moviepy.tools import convert_to_seconds
-from moviepy.video.VideoClip import TextClip, VideoClip
+from moviepy.video.VideoClip import VideoClip
+from moviepy import TextClip
 
 
 class SubtitlesClip(VideoClip):

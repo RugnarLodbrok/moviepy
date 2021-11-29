@@ -3,7 +3,7 @@
 import numpy as np
 import scipy.ndimage as ndi
 
-from moviepy.video.VideoClip import ImageClip
+from moviepy import ImageClip
 
 
 def find_objects(clip, size_threshold=500, preview=False):

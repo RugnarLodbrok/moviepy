@@ -3,7 +3,7 @@
 import pytest
 
 from moviepy.video.fx.blink import blink
-from moviepy.video.VideoClip import TextClip
+from moviepy import TextClip
 
 
 def test_list():
