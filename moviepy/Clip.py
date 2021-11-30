@@ -53,12 +53,14 @@ class Clip:
         self.memoized_t = None
         self.memoized_frame = None
 
+    def _reset_memoize(self):
+        self.memoized_t = None
+        self.memoized_frame = None
+
     def copy(self):
         """Allows the usage of ``.copy()`` in clips as chained methods invocation."""
         newclip = _copy.copy(self)
-
-        newclip.memoized_t = None
-        newclip.memoized_frame = None
+        newclip._reset_memoize()
         return newclip
 
     @convert_parameter_to_seconds(["t"])

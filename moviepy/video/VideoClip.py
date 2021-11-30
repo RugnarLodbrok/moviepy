@@ -151,8 +151,6 @@ class VideoClip(Clip):
             setattr(new_clip, attr, value)
         return new_clip
 
-    copy = __copy__
-
     # ===============================================================
     # EXPORT OPERATIONS
 
