@@ -2,9 +2,10 @@
 import os
 import subprocess as sp
 import warnings
+from typing import Callable
 
+import numpy as np
 import proglog
-
 
 OS_NAME = os.name
 
@@ -110,10 +111,10 @@ def deprecated_version_of(func, old_name):
     new_name = func.__name__
 
     warning = (
-        "The function ``%s`` is deprecated and is kept temporarily "
-        "for backwards compatibility.\nPlease use the new name, "
-        "``%s``, instead."
-    ) % (old_name, new_name)
+                  "The function ``%s`` is deprecated and is kept temporarily "
+                  "for backwards compatibility.\nPlease use the new name, "
+                  "``%s``, instead."
+              ) % (old_name, new_name)
 
     def deprecated_func(*args, **kwargs):
         warnings.warn("MoviePy: " + warning, PendingDeprecationWarning)
@@ -168,3 +169,34 @@ def find_extension(codec):
         "specify a temp_audiofile with the right extension "
         "in write_videofile."
     )
+
+
+def to_uint8(frame: np.ndarray) -> np.ndarray:
+    return (frame * 255).astype(np.uint8)
+
+
+def to_float(frame: np.ndarray) -> np.ndarray:
+    return frame.astype(float) / 255
+
+
+def make_fl_fn_for_mask(fn: Callable[[Callable[[float], np.ndarray], float], np.ndarray]):
+    """
+    Lets say we have a function `fn` that is passed to `clip.fl()`
+    To use it for `clip.mask.fl()` we need to convert uint8 frame to float
+    Example:
+
+        def fn():
+            ...
+
+        clip = clip.fl(fn)
+        fn_mask = make_fl_fn_for_mask(fn)
+        clip.mask = clip.mask.fl(fn_mask)
+    """
+
+    def mask_fn(get_frame: Callable[[float], np.ndarray], t: float):
+        def get_frame_mask(t: float):
+            return to_uint8(get_frame(t))
+
+        return to_float(fn(get_frame_mask, t))
+
+    return mask_fn

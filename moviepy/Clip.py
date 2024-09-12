@@ -3,6 +3,7 @@ are common to the two subclasses of Clip, VideoClip and AudioClip.
 """
 
 import copy as _copy
+from typing import Callable
 
 import numpy as np
 import proglog
@@ -52,9 +53,15 @@ class Clip:
         self.memoized_t = None
         self.memoized_frame = None
 
+    def _reset_memoize(self):
+        self.memoized_t = None
+        self.memoized_frame = None
+
     def copy(self):
         """Allows the usage of ``.copy()`` in clips as chained methods invocation."""
-        return _copy.copy(self)
+        newclip = _copy.copy(self)
+        newclip._reset_memoize()
+        return newclip
 
     @convert_parameter_to_seconds(["t"])
     def get_frame(self, t):
@@ -80,7 +87,8 @@ class Clip:
             # print(t)
             return self.make_frame(t)
 
-    def transform(self, func, apply_to=None, keep_duration=True):
+    def transform(self, func: Callable[[Callable[[float], np.ndarray], float], np.ndarray],
+                  apply_to=None, keep_duration=True) -> 'Clip':
         """General processing of a clip.
 
         Returns a new Clip whose frames are a transformation
@@ -443,7 +451,6 @@ class Clip:
                 end_time = self.duration + end_time
 
         if end_time is not None:
-
             new_clip.duration = end_time - start_time
             new_clip.end = new_clip.start + new_clip.duration
 
@@ -523,14 +530,7 @@ class Clip:
         >>> print ( [frame[0,:,0].max()
                      for frame in myclip.iter_frames()])
         """
-        logger = proglog.default_bar_logger(logger)
-        for frame_index in logger.iter_bar(
-            frame_index=np.arange(0, int(self.duration * fps))
-        ):
-            # int is used to ensure that floating point errors are rounded
-            # down to the nearest integer
-            t = frame_index / fps
-
+        for t in arange_fixed(0, self.duration, 1.0 / fps):
             frame = self.get_frame(t)
             if (dtype is not None) and (frame.dtype != dtype):
                 frame = frame.astype(dtype)
@@ -575,3 +575,10 @@ class Clip:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.close()
+
+
+def arange_fixed(a, b, step) -> np.ndarray:
+    result = np.arange(a, b, step)
+    if len(result) and result[-1] == b:
+        result = result[:-1]
+    return result

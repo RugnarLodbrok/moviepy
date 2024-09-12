@@ -1,6 +1,6 @@
 import numpy as np
 
-from moviepy.video.VideoClip import ImageClip
+from moviepy.video.ImageClip import ImageClip
 
 
 def mask_or(clip, other_clip):

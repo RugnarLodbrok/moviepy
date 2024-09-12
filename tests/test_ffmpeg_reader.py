@@ -17,7 +17,8 @@ from moviepy.video.io.ffmpeg_reader import (
     ffmpeg_parse_infos,
 )
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from moviepy.video.VideoClip import BitmapClip, ColorClip
+from moviepy.video.VideoClip import BitmapClip
+from moviepy import ColorClip
 
 
 def test_ffmpeg_parse_infos():

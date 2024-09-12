@@ -1,4 +1,7 @@
-import numbers
+from numbers import Number as Num
+from typing import Union, Tuple
+
+from moviepy.tools import make_fl_fn_for_mask
 
 
 def _get_cv2_resizer():
@@ -150,13 +153,13 @@ def resize(clip, new_size=None, height=None, width=None, apply_to_mask=True):
 
     if new_size is not None:
 
-        def translate_new_size(new_size_):
+        def translate_new_size(new_size_: Union[Num, Tuple[Num, Num]]) -> Tuple[Num, Num]:
             """Returns a [w, h] pair from `new_size_`. If `new_size_` is a
             scalar, then work out the correct pair using the clip's size.
             Otherwise just return `new_size_`
             """
-            if isinstance(new_size_, numbers.Number):
-                return [new_size_ * w, new_size_ * h]
+            if isinstance(new_size_, Num):
+                return new_size_ * w, new_size_ * h
             else:
                 return new_size_
 
@@ -166,18 +169,11 @@ def resize(clip, new_size=None, height=None, width=None, apply_to_mask=True):
             def get_new_size(t):
                 return translate_new_size(new_size(t))
 
+            def filter(get_frame, t):
+                return resizer(get_frame(t), get_new_size(t))
+
             if clip.is_mask:
-
-                def filter(get_frame, t):
-                    return (
-                        resizer((255 * get_frame(t)).astype("uint8"), get_new_size(t))
-                        / 255.0
-                    )
-
-            else:
-
-                def filter(get_frame, t):
-                    return resizer(get_frame(t).astype("uint8"), get_new_size(t))
+                filter = make_fl_fn_for_mask(filter)
 
             newclip = clip.transform(
                 filter, keep_duration=True, apply_to=(["mask"] if apply_to_mask else [])
@@ -241,6 +237,7 @@ if resizer is None:
 
     doc = resize.__doc__
 
+
     def resize(clip, new_size=None, height=None, width=None):
         """Fallback resize FX function, if OpenCV, Scipy and PIL are not installed.
 
@@ -248,6 +245,7 @@ if resizer is None:
         """
         fix_tips = "- " + "\n- ".join(_resizer_data["error_msgs"])
         raise ImportError(f"fx resize needs OpenCV or Scipy or PIL\n{fix_tips}")
+
 
     resize.__doc__ = doc
 

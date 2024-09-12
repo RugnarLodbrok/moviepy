@@ -7,7 +7,8 @@ import numpy as np
 import pytest
 
 from moviepy.Clip import Clip
-from moviepy.video.VideoClip import BitmapClip, ColorClip
+from moviepy.video.VideoClip import BitmapClip
+from moviepy import ColorClip
 
 
 def test_clip_equality():

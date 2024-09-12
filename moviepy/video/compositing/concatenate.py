@@ -6,7 +6,8 @@ import numpy as np
 
 from moviepy.audio.AudioClip import CompositeAudioClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
-from moviepy.video.VideoClip import ColorClip, VideoClip
+from moviepy.video.VideoClip import VideoClip
+from moviepy.video.ImageClip import ColorClip
 
 
 def concatenate_videoclips(

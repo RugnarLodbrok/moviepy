@@ -2,12 +2,18 @@
 
 import subprocess as sp
 import warnings
+from functools import reduce
+from operator import mul
+from typing import Union
 
 import numpy as np
+import structlog
 
 from moviepy.config import FFMPEG_BINARY
 from moviepy.tools import cross_platform_popen_params
 from moviepy.video.io.ffmpeg_reader import ffmpeg_parse_infos
+
+logger = structlog.get_logger()
 
 
 class FFMPEG_AudioReader:
@@ -41,14 +47,14 @@ class FFMPEG_AudioReader:
     """
 
     def __init__(
-        self,
-        filename,
-        buffersize,
-        decode_file=False,
-        print_infos=False,
-        fps=44100,
-        nbytes=2,
-        nchannels=2,
+            self,
+            filename,
+            buffersize,
+            decode_file=False,
+            print_infos=False,
+            fps=44100,
+            nbytes=2,
+            nchannels=2,
     ):
         # TODO bring FFMPEG_AudioReader more in line with FFMPEG_VideoReader
         # E.g. here self.pos is still 1-indexed.
@@ -91,21 +97,21 @@ class FFMPEG_AudioReader:
             i_arg = ["-i", self.filename, "-vn"]
 
         cmd = (
-            [FFMPEG_BINARY]
-            + i_arg
-            + [
-                "-loglevel",
-                "error",
-                "-f",
-                self.format,
-                "-acodec",
-                self.codec,
-                "-ar",
-                "%d" % self.fps,
-                "-ac",
-                "%d" % self.nchannels,
-                "-",
-            ]
+                [FFMPEG_BINARY]
+                + i_arg
+                + [
+                    "-loglevel",
+                    "error",
+                    "-f",
+                    self.format,
+                    "-acodec",
+                    self.codec,
+                    "-ar",
+                    "%d" % self.fps,
+                    "-ac",
+                    "%d" % self.nchannels,
+                    "-",
+                ]
         )
 
         popen_params = cross_platform_popen_params(
@@ -166,67 +172,84 @@ class FFMPEG_AudioReader:
         # last case standing: pos = current pos
         self.pos = pos
 
-    def get_frame(self, tt):
-        """TODO: add documentation"""
-        if isinstance(tt, np.ndarray):
-            # lazy implementation, but should not cause problems in
-            # 99.99 %  of the cases
+    def _get_frame_array(self, tt: np.ndarray):
+        # lazy implementation, but should not cause problems in
+        # 99.99 %  of the cases
 
-            # elements of t that are actually in the range of the
-            # audio file.
-            in_time = (tt >= 0) & (tt < self.duration)
+        # elements of t that are actually in the range of the
+        # audio file.
+        in_time = (tt >= 0) & (tt < self.duration)
 
-            # Check that the requested time is in the valid range
-            if not in_time.any():
-                raise IOError(
-                    "Error in file %s, " % (self.filename)
-                    + "Accessing time t=%.02f-%.02f seconds, " % (tt[0], tt[-1])
-                    + "with clip duration=%f seconds, " % self.duration
-                )
+        # Check that the requested time is in the valid range
+        if not in_time.any():
+            raise IOError(
+                "Error in file %s, " % (self.filename)
+                + "Accessing time t=%.02f-%.02f seconds, " % (tt[0], tt[-1])
+                + "with clip duration=%f seconds, " % self.duration
+            )
 
-            # The np.round in the next line is super-important.
-            # Removing it results in artifacts in the noise.
-            frames = np.round((self.fps * tt)).astype(int)[in_time]
-            fr_min, fr_max = frames.min(), frames.max()
+        # The np.round in the next line is super-important.
+        # Removing it results in artifacts in the noise.
+        frames = np.round((self.fps * tt)).astype(int)[in_time]
+        fr_min, fr_max = frames.min(), frames.max()
 
-            if not (0 <= (fr_min - self.buffer_startframe) < len(self.buffer)):
-                self.buffer_around(fr_min)
-            elif not (0 <= (fr_max - self.buffer_startframe) < len(self.buffer)):
-                self.buffer_around(fr_max)
+        if not (0 <= (fr_min - self.buffer_startframe) < len(self.buffer)):
+            self.buffer_around(fr_min)
+        elif not (0 <= (fr_max - self.buffer_startframe) < len(self.buffer)):
+            self.buffer_around(fr_max)
+
+        result = np.zeros((len(tt), self.nchannels))
+        if reduce(mul, self.buffer.shape) == 0:
+            if not getattr(self, '_already_reported', False):
+                self._already_reported = True
+                logger.warning("audio read error",
+                               details="data is missing",
+                               file=self.filename)
+            return result
+        indices = frames - self.buffer_startframe
+        try:
+            result[in_time] = self.buffer[indices]
+            return result
+        except IndexError as error:
+            logger.warning("audio read error",
+                           details="data is corrupted",
+                           file=self.filename,
+                           interval="{:.02f}..{:.02f}".format(tt[0], tt[-1]),
+                           indices=f"{indices.min()}..{indices.max()}",
+                           buffer_size=len(self.buffer))
 
             try:
-                result = np.zeros((len(tt), self.nchannels))
-                indices = frames - self.buffer_startframe
-                result[in_time] = self.buffer[indices]
-                return result
-
-            except IndexError as error:
-                warnings.warn(
-                    "Error in file %s, " % (self.filename)
-                    + "At time t=%.02f-%.02f seconds, " % (tt[0], tt[-1])
-                    + "indices wanted: %d-%d, " % (indices.min(), indices.max())
-                    + "but len(buffer)=%d\n" % (len(self.buffer))
-                    + str(error),
-                    UserWarning,
-                )
-
                 # repeat the last frame instead
                 indices[indices >= len(self.buffer)] = len(self.buffer) - 1
                 result[in_time] = self.buffer[indices]
-                return result
+            except Exception as e:
+                logger.error("failed to workaround corrupted audio",
+                             file=self.filename,
+                             exc_val=str(e),
+                             exc_type=str(type(e)))
+            return result
 
+    def _get_frame_simple(self, tt: float):
+        ind = int(self.fps * tt)
+        if ind < 0 or ind > self.n_frames:  # out of time: return 0
+            return np.zeros(self.nchannels)
+
+        if not (0 <= (ind - self.buffer_startframe) < len(self.buffer)):
+            # out of the buffer: recenter the buffer
+            self.buffer_around(ind)
+
+        # read the frame in the buffer
+        idx = ind - self.buffer_startframe
+        if idx < 0 or idx >= len(self.buffer):
+            return np.zeros(self.nchannels)
+
+        return self.buffer[idx]
+
+    def get_frame(self, tt: Union[np.ndarray, float]):
+        if isinstance(tt, np.ndarray):
+            return self._get_frame_array(tt)
         else:
-
-            ind = int(self.fps * tt)
-            if ind < 0 or ind > self.n_frames:  # out of time: return 0
-                return np.zeros(self.nchannels)
-
-            if not (0 <= (ind - self.buffer_startframe) < len(self.buffer)):
-                # out of the buffer: recenter the buffer
-                self.buffer_around(ind)
-
-            # read the frame in the buffer
-            return self.buffer[ind - self.buffer_startframe]
+            return self._get_frame_simple(tt)
 
     def buffer_around(self, frame_number):
         """

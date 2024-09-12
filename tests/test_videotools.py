@@ -35,8 +35,8 @@ except ImportError:
 else:
     from moviepy.video.tools.segmenting import find_objects
 
-from moviepy.video.VideoClip import BitmapClip, ColorClip, ImageClip, VideoClip
-
+from moviepy.video.VideoClip import BitmapClip, VideoClip
+from moviepy import ColorClip, ImageClip
 
 try:
     importlib.import_module("ipython.display")
